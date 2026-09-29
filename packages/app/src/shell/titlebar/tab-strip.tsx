@@ -260,36 +260,8 @@ export function TitlebarTabStrip(props: {
   })
   const visibleTabs = createMemo(() => tabsForRender().filter((tab) => tab.type === "draft" || visibility[tabKey(tab)]))
   const visibleTabIds = () => visibleTabs().map(tabKey)
-  // Horizontal project mode collapses each project to a single representative tab.
-  const projectGroupTabs = createMemo(() => {
-    if (!props.projectMode || vertical()) return []
-    const groups = new Map<string, { id: string; title: string; tab: Tab }>()
-    for (const tab of props.tabs) {
-      if (tab.type === "draft") {
-        groups.set(tabKey(tab), { id: tabKey(tab), title: language.t("session.tab.session"), tab })
-        continue
-      }
-      const server = global.servers.list().find((item) => ServerConnection.key(item) === tab.server)
-      const session = server ? global.ensureServerCtx(server).data.session.get(tab.sessionId) : undefined
-      const project = session && server ? global.ensureServerCtx(server).projects.forSession(session) : undefined
-      const id = project?.id ?? session?.projectID ?? `${tab.server}:${tab.sessionId}`
-      if (!groups.has(id)) {
-        groups.set(id, {
-          id,
-          title: project
-            ? displayName(project)
-            : session
-              ? displayName({ worktree: session.location.directory })
-              : id,
-          tab,
-        })
-      }
-    }
-    return [...groups.values()]
-  })
-
   const tabGroups = createMemo(() => {
-    if (!vertical() || !props.projectMode) return [{ id: "all", title: undefined, tabs: props.tabs }]
+    if (!props.projectMode) return [{ id: "all", title: undefined, tabs: props.tabs }]
 
     const groups = new Map<string, { id: string; title: string; tabs: Tab[] }>()
     props.tabs.forEach((tab) => {
@@ -447,40 +419,23 @@ export function TitlebarTabStrip(props: {
             classList={{ "flex-row items-center": !vertical(), "flex-col items-stretch": vertical() }}
             ref={listRef}
           >
-            <Show
-              when={props.projectMode && !vertical()}
-              fallback={
-                <For each={tabGroups()}>
-                  {(group) => (
-                    <div
-                      class="flex min-w-0 flex-col gap-1"
-                      data-slot={vertical() ? "vertical-tabs-project-group" : undefined}
-                    >
-                      <Show when={vertical()}>
-                        <div class="flex h-7 min-w-0 items-center gap-1.5 truncate px-1.5 text-[13px] font-semibold leading-[var(--line-height-compact)] text-v2-text-text-base">
-                          <Icon name="folder" size="small" class="shrink-0 text-v2-icon-icon-muted" />
-                          {group.title}
-                        </div>
-                      </Show>
-                      <For each={group.tabs}>{(tab) => renderTab(tab)}</For>
+            <For each={tabGroups()}>
+              {(group) => (
+                <div
+                  class="flex min-w-0 gap-1"
+                  classList={{ "flex-row": !vertical(), "flex-col": vertical() }}
+                  data-slot={vertical() ? "vertical-tabs-project-group" : undefined}
+                >
+                  <Show when={vertical()}>
+                    <div class="flex h-7 min-w-0 items-center gap-1.5 truncate px-1.5 text-[13px] font-semibold leading-[var(--line-height-compact)] text-v2-text-text-base">
+                      <Icon name="folder" size="small" class="shrink-0 text-v2-icon-icon-muted" />
+                      {group.title}
                     </div>
-                  )}
-                </For>
-              }
-            >
-              <For each={projectGroupTabs()}>
-                {(group) => (
-                  <button
-                    type="button"
-                    class="h-7 max-w-56 min-w-24 shrink-0 truncate rounded-[6px] px-2 text-start text-[13px] leading-[var(--line-height-compact)] text-v2-text-text-faint hover:bg-v2-background-bg-layer-02 data-[active=true]:bg-v2-background-bg-layer-02 data-[active=true]:text-v2-text-text-base"
-                    data-active={group.tab === props.currentTab}
-                    onClick={() => props.onNavigate(group.tab)}
-                  >
-                    {group.title}
-                  </button>
-                )}
-              </For>
-            </Show>
+                  </Show>
+                  <For each={group.tabs}>{(tab) => renderTab(tab)}</For>
+                </div>
+              )}
+            </For>
           </div>
         </DragDropProvider>
       </div>
