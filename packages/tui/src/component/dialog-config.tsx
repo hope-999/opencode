@@ -161,6 +161,15 @@ export const settings: Setting[] = [
     keywords: ["tab numbers", "number mode", "status icons"],
   },
   {
+    title: "Group by project",
+    category: "Tabs",
+    path: ["tabs", "groupByProject"],
+    default: true,
+    values: [true, false],
+    labels: ["enabled", "disabled"],
+    keywords: ["project tabs", "session groups"],
+  },
+  {
     title: "Layout",
     category: "Diffs",
     path: ["diffs", "view"],

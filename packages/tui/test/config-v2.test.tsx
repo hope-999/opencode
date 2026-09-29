@@ -36,6 +36,7 @@ test("validates the session tabs setting", () => {
   expect(decode({ tabs: { mode: "on", layout: "vertical", indicators: "numbers" } })).toEqual({
     tabs: { mode: "on", layout: "vertical", indicators: "numbers" },
   })
+  expect(decode({ tabs: { groupByProject: false } })).toEqual({ tabs: { groupByProject: false } })
   expect(() => decode({ tabs: { indicators: "unknown" } })).toThrow()
   expect(() => decode({ tabs: { layout: true } })).toThrow()
   expect(() => decode({ tabs: { mode: true } })).toThrow()
@@ -69,10 +70,12 @@ test("resolves nested config and keybind defaults", () => {
     enabled: true,
     scope: "cwd",
     layout: "horizontal",
+    groupByProject: true,
     indicators: "status",
   })
   expect(config.session.new_location).toBe("launch")
   expect(config.session.tps).toBe(true)
+  expect(config.tabs.groupByProject).toBe(true)
 })
 
 test("resolves automatic tabs from the terminal environment", () => {
@@ -98,6 +101,7 @@ test("shows resolved tab defaults in settings", () => {
   })
   expect(settings.find((setting) => setting.path.join(".") === "tabs.scope")?.default).toBe("cwd")
   expect(settings.find((setting) => setting.path.join(".") === "tabs.layout")?.default).toBe("horizontal")
+  expect(settings.find((setting) => setting.path.join(".") === "tabs.groupByProject")?.default).toBe(true)
   expect(settings.find((setting) => setting.path.join(".") === "tabs.indicators")).toMatchObject({
     default: "status",
     values: ["status", "numbers"],

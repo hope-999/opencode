@@ -95,4 +95,10 @@ export function truncateMiddle(str: string, maxLength: number = 35): string {
   return str.slice(0, keepStart) + ellipsis + str.slice(-keepEnd)
 }
 
+export const sessionNavigation = {
+  more: "More sessions",
+  empty: "No sessions",
+  loadFailed: "Failed to load sessions",
+}
+
 export * as Locale from "./locale"

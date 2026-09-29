@@ -70,6 +70,7 @@ import { DialogAgent } from "./component/dialog-agent"
 import { DialogSessionList } from "./component/dialog-session-list"
 import { DialogOpen, DialogOpenKey, moveOpenSession } from "./component/dialog-open"
 import { SessionTabs } from "./component/session-tabs"
+import { ProjectSessionNavigation, ProjectTabs } from "./component/project-session-navigation"
 import { clampSessionTabsWidth, sessionTabsFitVertically, SESSION_SIDEBAR_WIDTH } from "./ui/layout"
 import { createPaneResize } from "./ui/pane-resize"
 import { PaneResizeHandle } from "./ui/pane-resize-handle"
@@ -580,7 +581,10 @@ function App() {
   const pasteSummaryEnabled = () => config.data.prompt?.paste !== "full"
   const tabsVertical = () =>
     config.data.tabs.layout === "vertical" && sessionTabsFitVertically(dimensions().width, tabsResize.size())
-  const tabsAvailable = () => sessionTabs.enabled() && sessionTabs.tabs().length > 0 && route.data.type !== "plugin"
+  const tabsAvailable = () =>
+    sessionTabs.enabled() &&
+    (config.data.tabs.groupByProject ? data.session.list().length > 0 : sessionTabs.tabs().length > 0) &&
+    route.data.type !== "plugin"
   const fullscreenPanel = () =>
     route.data.type === "session" &&
     panels.current()?.sessionID === route.data.sessionID &&
@@ -1352,13 +1356,20 @@ function App() {
         onMouseUp={tabsResize.onMouseUp}
       >
         <Show when={verticalTabsVisible()}>
-          <SessionTabs orientation="vertical" width={tabsResize.size()} />
+          <Show
+            when={config.data.tabs.groupByProject}
+            fallback={<SessionTabs orientation="vertical" width={tabsResize.size()} />}
+          >
+            <ProjectSessionNavigation orientation="vertical" width={tabsResize.size()} />
+          </Show>
         </Show>
         <box flexGrow={1} minWidth={0} flexDirection="column">
           <Show when={plugins.ready()}>
             <box flexGrow={1} minHeight={0} flexDirection="column">
               <Show when={tabsVisible() && !tabsVertical()}>
-                <SessionTabs />
+                <Show when={config.data.tabs.groupByProject} fallback={<SessionTabs />}>
+                  <ProjectTabs />
+                </Show>
               </Show>
               <Switch>
                 <Match when={route.data.type === "home"}>
@@ -1367,10 +1378,19 @@ function App() {
                 <Match when={route.data.type === "session"}>
                   <Show when={route.data.type === "session" ? route.data.sessionID : undefined} keyed>
                     {(sessionID) => (
-                      <SessionFrame
-                        sessionID={sessionID}
-                        verticalTabsWidth={verticalTabsVisible() ? tabsResize.size() : 0}
-                      />
+                      <box flexGrow={1} minHeight={0} flexDirection="row">
+                        <Show when={config.data.tabs.groupByProject && !tabsVertical()}>
+                          <box width={SESSION_SIDEBAR_WIDTH} flexShrink={0} minHeight={0}>
+                            <ProjectSessionNavigation orientation="horizontal" />
+                          </box>
+                        </Show>
+                        <box flexGrow={1} minWidth={0} minHeight={0}>
+                          <SessionFrame
+                            sessionID={sessionID}
+                            verticalTabsWidth={verticalTabsVisible() ? tabsResize.size() : 0}
+                          />
+                        </box>
+                      </box>
                     )}
                   </Show>
                 </Match>
