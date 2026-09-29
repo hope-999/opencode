@@ -1,15 +1,12 @@
-import { For, Show, createMemo, createResource } from "solid-js"
+import { For, Show, createMemo } from "solid-js"
 import { TextAttributes } from "@opentui/core"
-import type { SessionInfo } from "@opencode/client"
-import { useClient } from "../context/client"
-import { useConfig } from "../config"
 import { useData } from "../context/data"
 import { useSessionTabs } from "../context/session-tabs"
 import { useTheme } from "../context/theme"
 import { useStorage } from "../context/storage"
 import { withTimestampedFallback } from "@opencode/util/session-title-fallback"
 import { Locale } from "../util/locale"
-import { groupSessions, mergeSessions, paginateSessions } from "./project-session-navigation-model"
+import { groupSessions, paginateSessions } from "./project-session-navigation-model"
 
 const HORIZONTAL_PAGE = 10
 const VERTICAL_PAGE = 5
@@ -20,16 +17,10 @@ type NavigationProps = {
 }
 
 export function ProjectTabs() {
-  const client = useClient()
-  const config = useConfig().data
   const data = useData()
   const tabs = useSessionTabs()
   const theme = useTheme()
-  const [sessions] = createResource(
-    () => (config.tabs.groupByProject && client.connection.status() === "connected" ? true : undefined),
-    () => loadSessions(client),
-  )
-  const allSessions = createMemo(() => mergeSessions(sessions() ?? [], data.session.list()))
+  const allSessions = createMemo(() => openSessions(tabs, data))
   const groups = createMemo(() => groupSessions(allSessions(), (projectID) => data.project.get(projectID)))
   const currentProject = createMemo(() => {
     const sessionID = tabs.current()
@@ -77,8 +68,6 @@ export function ProjectTabs() {
 }
 
 export function ProjectSessionNavigation(props: NavigationProps) {
-  const client = useClient()
-  const config = useConfig().data
   const data = useData()
   const tabs = useSessionTabs()
   const theme = useTheme()
@@ -86,11 +75,7 @@ export function ProjectSessionNavigation(props: NavigationProps) {
   const [navigation, updateNavigation] = storage.store<NavigationState>("project-session-navigation", {
     initial: { expanded: {}, visible: {} },
   })
-  const [sessions] = createResource<SessionInfo[], boolean | undefined>(
-    () => (config.tabs.groupByProject && client.connection.status() === "connected" ? true : undefined),
-    () => loadSessions(client),
-  )
-  const allSessions = createMemo(() => mergeSessions(sessions() ?? [], data.session.list()))
+  const allSessions = createMemo(() => openSessions(tabs, data))
   const groups = createMemo(() => groupSessions(allSessions(), (projectID) => data.project.get(projectID)))
   const currentProject = createMemo(() => {
     const sessionID = tabs.current()
@@ -106,7 +91,7 @@ export function ProjectSessionNavigation(props: NavigationProps) {
   return (
     <scrollbox
       width={props.width}
-      flexGrow={1}
+      flexGrow={props.width === undefined ? 1 : 0}
       minHeight={0}
       scrollbarOptions={{ visible: false }}
       backgroundColor={theme.background.raised.base}
@@ -152,13 +137,28 @@ export function ProjectSessionNavigation(props: NavigationProps) {
                               tabs.select(session.id)
                             }}
                           >
-                            <text
-                              fg={active() ? theme.text.base : theme.text.muted}
-                              attributes={active() ? TextAttributes.BOLD : undefined}
-                              selectable={false}
-                            >
-                              {sessionStatus(session.id, tabs)} {withTimestampedFallback(session)}
-                            </text>
+                              <box flexGrow={1} minWidth={0}>
+                                <text
+                                  fg={active() ? theme.text.base : theme.text.muted}
+                                  attributes={active() ? TextAttributes.BOLD : undefined}
+                                  selectable={false}
+                                >
+                                  {sessionStatus(session.id, tabs)} {withTimestampedFallback(session)}
+                                </text>
+                              </box>
+                              <box
+                                width={2}
+                                flexShrink={0}
+                                onMouseUp={(event) => {
+                                  if (event.button !== 0) return
+                                  event.stopPropagation()
+                                  tabs.close(session.id)
+                                }}
+                              >
+                                <text fg={theme.text.muted} selectable={false}>
+                                  ×
+                                </text>
+                              </box>
                           </box>
                         )
                       }}
@@ -183,11 +183,8 @@ export function ProjectSessionNavigation(props: NavigationProps) {
             )
           }}
         </For>
-        <Show when={groups().length === 0 && !sessions.loading}>
+        <Show when={groups().length === 0}>
           <text fg={theme.text.muted} selectable={false}>{Locale.sessionNavigation.empty}</text>
-        </Show>
-        <Show when={sessions.error}>
-          <text fg={theme.text.feedback.error.base} selectable={false}>{Locale.sessionNavigation.loadFailed}</text>
         </Show>
       </box>
     </scrollbox>
@@ -199,6 +196,13 @@ type NavigationState = {
   visible: Record<string, number>
 }
 
+function openSessions(tabs: ReturnType<typeof useSessionTabs>, data: ReturnType<typeof useData>) {
+  return tabs.tabs().flatMap((tab) => {
+    const session = data.session.get(tab.sessionID)
+    return session && !session.parentID ? [session] : []
+  })
+}
+
 function sessionStatus(sessionID: string, tabs: ReturnType<typeof useSessionTabs>) {
   const status = tabs.status(sessionID)
   if (status.attention === "permission") return "!"
@@ -207,15 +211,4 @@ function sessionStatus(sessionID: string, tabs: ReturnType<typeof useSessionTabs
   if (status.unread === "error") return "×"
   if (status.unread) return "•"
   return " "
-}
-
-async function loadSessions(client: ReturnType<typeof useClient>) {
-  const sessions: SessionInfo[] = []
-  let cursor: string | undefined
-  do {
-    const response = await client.api.session.list({ limit: 100, order: "desc", parentID: null, cursor })
-    sessions.push(...response.data)
-    cursor = response.cursor.next ?? undefined
-  } while (cursor)
-  return sessions
 }

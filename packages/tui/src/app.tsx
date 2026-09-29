@@ -579,11 +579,12 @@ function App() {
   }
   const terminalTitleEnabled = () => config.data.terminal?.title ?? true
   const pasteSummaryEnabled = () => config.data.prompt?.paste !== "full"
+  const verticalTabsWidth = () => (config.data.tabs.groupByProject ? SESSION_SIDEBAR_WIDTH : tabsResize.size())
   const tabsVertical = () =>
-    config.data.tabs.layout === "vertical" && sessionTabsFitVertically(dimensions().width, tabsResize.size())
+    config.data.tabs.layout === "vertical" && sessionTabsFitVertically(dimensions().width, verticalTabsWidth())
   const tabsAvailable = () =>
     sessionTabs.enabled() &&
-    (config.data.tabs.groupByProject ? data.session.list().length > 0 : sessionTabs.tabs().length > 0) &&
+    sessionTabs.tabs().length > 0 &&
     route.data.type !== "plugin"
   const fullscreenPanel = () =>
     route.data.type === "session" &&
@@ -593,7 +594,7 @@ function App() {
   const verticalTabsVisible = () => tabsVisible() && tabsVertical()
 
   // Measure the prospective split layout, even while full-screen hides the tabs.
-  createEffect(() => panels.setWidth(dimensions().width - (tabsAvailable() && tabsVertical() ? tabsResize.size() : 0)))
+  createEffect(() => panels.setWidth(dimensions().width - (tabsAvailable() && tabsVertical() ? verticalTabsWidth() : 0)))
   createEffect(() => {
     const current = panels.current()
     if (!current || (route.data.type === "session" && route.data.sessionID === current.sessionID)) return
@@ -1360,7 +1361,7 @@ function App() {
             when={config.data.tabs.groupByProject}
             fallback={<SessionTabs orientation="vertical" width={tabsResize.size()} />}
           >
-            <ProjectSessionNavigation orientation="vertical" width={tabsResize.size()} />
+            <ProjectSessionNavigation orientation="vertical" width={verticalTabsWidth()} />
           </Show>
         </Show>
         <box flexGrow={1} minWidth={0} flexDirection="column">
@@ -1387,7 +1388,7 @@ function App() {
                         <box flexGrow={1} minWidth={0} minHeight={0}>
                           <SessionFrame
                             sessionID={sessionID}
-                            verticalTabsWidth={verticalTabsVisible() ? tabsResize.size() : 0}
+                            verticalTabsWidth={verticalTabsVisible() ? verticalTabsWidth() : 0}
                           />
                         </box>
                       </box>
@@ -1406,7 +1407,7 @@ function App() {
             <Slot path="app" />
           </Show>
         </box>
-        <Show when={verticalTabsVisible()}>
+        <Show when={verticalTabsVisible() && !config.data.tabs.groupByProject}>
           <PaneResizeHandle resize={tabsResize} left={tabsResize.size() - 1} />
         </Show>
       </box>
