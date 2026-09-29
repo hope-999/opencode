@@ -20,6 +20,7 @@ import { isTabCloseTarget } from "./tab-gesture"
 import { adjacentTabKey, mergeVisibleTabOrder } from "./tab-order"
 import type { SessionInfo } from "@opencode/client/promise"
 import { displayName } from "@/shell/layout/helpers"
+import { Icon } from "@opencode/ui/icon"
 
 function SessionTabSlot(props: {
   tab: SessionTab
@@ -259,29 +260,36 @@ export function TitlebarTabStrip(props: {
   })
   const visibleTabs = createMemo(() => tabsForRender().filter((tab) => tab.type === "draft" || visibility[tabKey(tab)]))
   const visibleTabIds = () => visibleTabs().map(tabKey)
-  const tabGroups = createMemo(() => {
-    if (props.projectMode) {
-      const groups = new Map<string, { id: string; title: string; tab: Tab }>()
-      for (const tab of props.tabs) {
-        if (tab.type === "draft") {
-          groups.set(tabKey(tab), { id: tabKey(tab), title: language.t("session.tab.session"), tab })
-          continue
-        }
-        const server = global.servers.list().find((item) => ServerConnection.key(item) === tab.server)
-        const session = server ? global.ensureServerCtx(server).data.session.get(tab.sessionId) : undefined
-        const project = session && server ? global.ensureServerCtx(server).projects.forSession(session) : undefined
-        const id = session?.projectID ?? `${tab.server}:${tab.sessionId}`
-        if (!groups.has(id)) {
-          groups.set(id, {
-            id,
-            title: project ? displayName(project) : session ? displayName({ worktree: session.location.directory }) : id,
-            tab,
-          })
-        }
+  // Horizontal project mode collapses each project to a single representative tab.
+  const projectGroupTabs = createMemo(() => {
+    if (!props.projectMode || vertical()) return []
+    const groups = new Map<string, { id: string; title: string; tab: Tab }>()
+    for (const tab of props.tabs) {
+      if (tab.type === "draft") {
+        groups.set(tabKey(tab), { id: tabKey(tab), title: language.t("session.tab.session"), tab })
+        continue
       }
-      return [...groups.values()]
+      const server = global.servers.list().find((item) => ServerConnection.key(item) === tab.server)
+      const session = server ? global.ensureServerCtx(server).data.session.get(tab.sessionId) : undefined
+      const project = session && server ? global.ensureServerCtx(server).projects.forSession(session) : undefined
+      const id = project?.id ?? session?.projectID ?? `${tab.server}:${tab.sessionId}`
+      if (!groups.has(id)) {
+        groups.set(id, {
+          id,
+          title: project
+            ? displayName(project)
+            : session
+              ? displayName({ worktree: session.location.directory })
+              : id,
+          tab,
+        })
+      }
     }
-    if (!vertical()) return [{ id: "all", title: undefined, tabs: props.tabs }]
+    return [...groups.values()]
+  })
+
+  const tabGroups = createMemo(() => {
+    if (!vertical() || !props.projectMode) return [{ id: "all", title: undefined, tabs: props.tabs }]
 
     const groups = new Map<string, { id: string; title: string; tabs: Tab[] }>()
     props.tabs.forEach((tab) => {
@@ -294,7 +302,7 @@ export function TitlebarTabStrip(props: {
       const serverCtx = server ? global.ensureServerCtx(server) : undefined
       const session = serverCtx?.data.session.get(tab.sessionId)
       const project = session ? serverCtx?.projects.forSession(session) : undefined
-      const id = session?.projectID ?? project?.id ?? `${tab.server}:${tab.sessionId}`
+      const id = project?.id ?? session?.projectID ?? `${tab.server}:${tab.sessionId}`
       const title = project
         ? displayName(project)
         : session
@@ -309,6 +317,40 @@ export function TitlebarTabStrip(props: {
     })
     return [...groups.values()]
   })
+
+  const renderTab = (tab: Tab) => {
+    const id = tabKey(tab)
+    const index = tabsForRender().findIndex((item) => tabKey(item) === id)
+    const active = props.currentTab ? tabKey(props.currentTab) === id : false
+    if (tab.type === "draft") {
+      return (
+        <DraftTabSlot
+          tab={tab}
+          id={id}
+          index={index}
+          active={active}
+          orientation={props.orientation ?? "horizontal"}
+          title={language.t("session.tab.session")}
+          onNavigate={(element) => props.onNavigate(tab, element)}
+          onClose={() => props.onClose(tab)}
+        />
+      )
+    }
+    const server = global.servers.list().find((item) => ServerConnection.key(item) === tab.server)
+    return (
+      <SessionTabEntry
+        tab={tab}
+        id={id}
+        index={index}
+        active={active}
+        orientation={props.orientation ?? "horizontal"}
+        serverCtx={server ? global.ensureServerCtx(server) : undefined}
+        onVisibleChange={(visible) => setVisibility(id, visible)}
+        onNavigate={(element) => props.onNavigate(tab, element)}
+        onClose={() => props.onClose(tab)}
+      />
+    )
+  }
 
   command.register("titlebar-tab-cycle", () => [
     {
@@ -405,19 +447,28 @@ export function TitlebarTabStrip(props: {
             classList={{ "flex-row items-center": !vertical(), "flex-col items-stretch": vertical() }}
             ref={listRef}
           >
-            <Show when={props.projectMode} fallback={<For each={tabGroups()}>
-              {(group) => (
-                <div class="flex min-w-0 flex-col gap-1" data-slot={vertical() ? "vertical-tabs-project-group" : undefined}>
-                  <Show when={vertical()}>
-                    <div class="h-5 min-w-0 truncate px-1.5 pt-1 text-[11px] leading-[var(--line-height-compact)] text-v2-text-text-muted">
-                      {group.title}
+            <Show
+              when={props.projectMode && !vertical()}
+              fallback={
+                <For each={tabGroups()}>
+                  {(group) => (
+                    <div
+                      class="flex min-w-0 flex-col gap-1"
+                      data-slot={vertical() ? "vertical-tabs-project-group" : undefined}
+                    >
+                      <Show when={vertical()}>
+                        <div class="flex h-7 min-w-0 items-center gap-1.5 truncate px-1.5 text-[13px] font-semibold leading-[var(--line-height-compact)] text-v2-text-text-base">
+                          <Icon name="folder" size="small" class="shrink-0 text-v2-icon-icon-muted" />
+                          {group.title}
+                        </div>
+                      </Show>
+                      <For each={group.tabs}>{(tab) => renderTab(tab)}</For>
                     </div>
-                  </Show>
-                  <For each={group.tabs}>{(tab) => renderTab(tab)}</For>
-                </div>
-              )}
-            </For>}>
-              <For each={tabGroups()}>
+                  )}
+                </For>
+              }
+            >
+              <For each={projectGroupTabs()}>
                 {(group) => (
                   <button
                     type="button"

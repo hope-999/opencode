@@ -41,6 +41,10 @@
   grid-row: 1;
 }
 
+[data-slot="vertical-tabs-project-group"] [data-titlebar-tab][data-orientation="vertical"] [data-slot="tab-title"] {
+  font-size: 12px;
+}
+
 [data-titlebar-tab][data-orientation="vertical"] [data-slot="tab-project"] {
   grid-column: 2;
   grid-row: 2;

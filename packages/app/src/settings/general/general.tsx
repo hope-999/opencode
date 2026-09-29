@@ -321,6 +321,25 @@ const TabLayoutSetting = () => {
   )
 }
 
+const GroupTabsByProjectSetting = () => {
+  const language = useLanguage()
+  const settings = useSettings()
+  return (
+    <SettingsRow
+      title={language.t("settings.appearance.row.tabs.groupByProject.title")}
+      description={language.t("settings.appearance.row.tabs.groupByProject.description")}
+    >
+      <div data-action="settings-tabs-group-by-project">
+        <Switch
+          aria-label={language.t("settings.appearance.row.tabs.groupByProject.title")}
+          checked={settings.appearance.groupTabsByProject()}
+          onChange={settings.appearance.setGroupTabsByProject}
+        />
+      </div>
+    </SettingsRow>
+  )
+}
+
 export const SettingsGeneral: Component = () => {
   const language = useLanguage()
   const platform = usePlatform()
@@ -348,6 +367,7 @@ export const SettingsGeneral: Component = () => {
       <SettingsList>
         <LanguageSetting />
         <TabLayoutSetting />
+        <GroupTabsByProjectSetting />
 
         <WorkspaceDestinationSetting />
         <AutoApprovePermissionsSetting />

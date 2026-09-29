@@ -1306,6 +1306,8 @@ export const dict = {
   "settings.appearance.row.tabs.description": "选择会话标签页的排列方式",
   "settings.appearance.row.tabs.horizontal": "水平",
   "settings.appearance.row.tabs.vertical": "垂直",
+  "settings.appearance.row.tabs.groupByProject.title": "按项目分组标签页",
+  "settings.appearance.row.tabs.groupByProject.description": "将会话标签页按项目归类显示",
   "settings.general.row.followUpBehavior.title": "后续消息行为",
   "settings.general.row.followUpBehavior.description":
     "选择将后续消息加入队列还是引导当前轮次。使用 {{keybind}} 切换。",

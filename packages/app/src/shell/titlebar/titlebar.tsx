@@ -179,6 +179,7 @@ export function Titlebar(props: {
             const global = useGlobal()
 
             const tabs = useTabs()
+            const preferences = useSettings()
             const tabsStore = tabs.store
             const tabsStoreActions = tabs
             const preparing = createMemo(() => {
@@ -617,6 +618,7 @@ export function Titlebar(props: {
                     fallback={
                       <>
                         <TitlebarTabStrip
+                          projectMode={preferences.appearance.groupTabsByProject()}
                           tabs={tabsStore}
                           currentTab={currentTab()}
                           onNavigate={(tab, el) => {
@@ -690,6 +692,7 @@ export function Titlebar(props: {
                             <div class="flex min-h-0 flex-1 flex-col gap-1">
                               <TitlebarTabStrip
                                 orientation="vertical"
+                                projectMode={preferences.appearance.groupTabsByProject()}
                                 tabs={tabsStore}
                                 currentTab={currentTab()}
                                 onNavigate={(tab, el) => {
