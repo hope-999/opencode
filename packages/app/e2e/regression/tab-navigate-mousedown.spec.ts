@@ -12,6 +12,7 @@ test("new session tab matches neighboring session widths", async ({ page }, test
   await mockServer(page)
   await page.addInitScript(
     ({ server, sessionA, sessionB, directory }) => {
+      localStorage.setItem("settings.v3", JSON.stringify({ appearance: { groupTabsByProject: false } }))
       localStorage.setItem(
         "opencode.window.browser.dat:tabs",
         JSON.stringify([
@@ -46,10 +47,96 @@ test("new session tab matches neighboring session widths", async ({ page }, test
   }
 })
 
+test("horizontal project navigation keeps every opened session in its project sidebar", async ({ page }) => {
+  await mockServer(page)
+  await page.addInitScript(
+    ({ server, sessionA, sessionB, sessionC }) => {
+      localStorage.setItem(
+        "settings.v3",
+        JSON.stringify({ appearance: { tabLayout: "horizontal", groupTabsByProject: true } }),
+      )
+      localStorage.setItem(
+        "opencode.window.browser.dat:tabs",
+        JSON.stringify([
+          { type: "session", server, sessionId: sessionA },
+          { type: "session", server, sessionId: sessionB },
+          { type: "session", server, sessionId: sessionC },
+        ]),
+      )
+    },
+    { server, sessionA: sessionA.id, sessionB: sessionB.id, sessionC: sessionC.id },
+  )
+
+  await page.goto(`/server/${base64Encode(server)}/session/${sessionA.id}`)
+
+  const projects = page.locator('[data-slot="project-tabs"] [data-slot="project-tab"]')
+  await expect(projects).toHaveCount(1)
+  await expect(projects).toHaveText(["tab-project"])
+  await expect(page.locator('[data-slot="titlebar-tabs"]')).toHaveCount(0)
+
+  const sidebar = page.locator('[data-slot="horizontal-project-sidebar"]')
+  const tabs = sidebar.locator("[data-titlebar-tab-slot]")
+  await expect(tabs).toHaveCount(3)
+  await expect(tabs.locator("[data-titlebar-tab-title]")).toHaveText([sessionA.title, sessionB.title, sessionC.title])
+  const tabC = tabs.filter({ has: page.locator(`[data-titlebar-tab-link][href*="${sessionC.id}"]`) })
+  await expect(tabC).toBeVisible()
+  await tabC.click()
+  await expect(page).toHaveURL(new RegExp(`${sessionC.id}$`))
+})
+
+test("horizontal project navigation resizes its session sidebar in a narrow window", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 720 })
+  await mockServer(page)
+  await page.addInitScript(
+    ({ server, directory, sessionA, sessionB, sessionC }) => {
+      localStorage.setItem(
+        "settings.v3",
+        JSON.stringify({ appearance: { tabLayout: "horizontal", groupTabsByProject: true } }),
+      )
+      localStorage.setItem(
+        "opencode.window.browser.dat:tabs",
+        JSON.stringify([
+          ...Array.from({ length: 4 }, (_, index) => ({
+            type: "draft",
+            server,
+            directory,
+            draftID: `draft_before_project_${index}`,
+          })),
+          { type: "session", server, sessionId: sessionA },
+          { type: "session", server, sessionId: sessionB },
+          { type: "session", server, sessionId: sessionC },
+        ]),
+      )
+    },
+    { server, directory: sessionA.directory, sessionA: sessionA.id, sessionB: sessionB.id, sessionC: sessionC.id },
+  )
+
+  await page.goto(`/server/${base64Encode(server)}/session/${sessionA.id}`)
+
+  const sidebar = page.locator('[data-slot="horizontal-project-sidebar"]')
+  await expect(sidebar).toHaveCSS("width", "260px")
+  await expect(sidebar.locator("[data-titlebar-tab-slot]")).toHaveCount(7)
+  const handle = sidebar.locator('[data-component="resize-handle"]')
+  const box = await handle.boundingBox()
+  if (!box) throw new Error("horizontal project sidebar resize handle has no bounding box")
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x - 120, box.y + box.height / 2)
+  await page.mouse.up()
+  await expect(sidebar).toHaveCSS("width", "140px")
+
+  const hrefC = `/server/${base64Encode(server)}/session/${sessionC.id}`
+  const tabC = sidebar.locator(`[data-titlebar-tab-link][href="${hrefC}"]`)
+  await expect(tabC).toBeVisible()
+  await tabC.click()
+  await expect(page).toHaveURL(new RegExp(`${sessionC.id}$`))
+})
+
 test("pressing mouse down on a tab navigates before mouse up", async ({ page }) => {
   await mockServer(page)
   await page.addInitScript(
     ({ server, sessionA, sessionB }) => {
+      localStorage.setItem("settings.v3", JSON.stringify({ appearance: { groupTabsByProject: false } }))
       localStorage.setItem(
         "opencode.window.browser.dat:tabs",
         JSON.stringify([
@@ -83,6 +170,7 @@ test("keyboard navigation follows the visible tab order", async ({ page }) => {
   await mockServer(page)
   await page.addInitScript(
     ({ server, sessionA, unresolved, sessionC }) => {
+      localStorage.setItem("settings.v3", JSON.stringify({ appearance: { groupTabsByProject: false } }))
       localStorage.setItem(
         "opencode.window.browser.dat:tabs",
         JSON.stringify([
@@ -299,7 +387,10 @@ for (const direction of ["ltr", "rtl"]) {
       ({ server, sessionA, sessionB, directory }) => {
         localStorage.setItem(
           "settings.v3",
-          JSON.stringify({ appearance: { tabLayout: "vertical" }, general: { showStatus: true } }),
+          JSON.stringify({
+            appearance: { tabLayout: "vertical", groupTabsByProject: false },
+            general: { showStatus: true },
+          }),
         )
         localStorage.setItem(
           "opencode.window.browser.dat:tabs",
@@ -436,6 +527,7 @@ test("preferences control vertical tab layout and hide empty experimental settin
   await mockServer(page)
   await page.addInitScript(
     ({ server, sessionA }) => {
+      localStorage.setItem("settings.v3", JSON.stringify({ appearance: { groupTabsByProject: false } }))
       localStorage.setItem(
         "opencode.window.browser.dat:tabs",
         JSON.stringify([{ type: "session", server, sessionId: sessionA }]),
@@ -532,7 +624,10 @@ test("vertical tab preference uses the drawer on mobile", async ({ page }) => {
   await mockServer(page)
   await page.addInitScript(
     ({ server, sessionA }) => {
-      localStorage.setItem("settings.v3", JSON.stringify({ appearance: { tabLayout: "vertical" } }))
+      localStorage.setItem(
+        "settings.v3",
+        JSON.stringify({ appearance: { tabLayout: "vertical", groupTabsByProject: false } }),
+      )
       localStorage.setItem(
         "opencode.window.browser.dat:tabs",
         JSON.stringify([{ type: "session", server, sessionId: sessionA }]),

@@ -13,6 +13,7 @@ import { SshAuthentication } from "@/servers/ssh/authentication"
 import { useUpdaterInstall } from "@/shell/updates/download"
 import { useCommand } from "@/shell/commands/command"
 import { useLanguage } from "@/runtime/i18n/language"
+import { useLayout } from "@/shell/state/layout"
 
 const DebugBar = lazy(() => import("@/shell/debug/debug-bar").then((module) => ({ default: module.DebugBar })))
 
@@ -20,6 +21,7 @@ export default function Layout(props: ParentProps) {
   const platform = usePlatform()
   const settings = useSettingsSurface()
   const preferences = useSettings()
+  const layout = useLayout()
   const installUpdate = useUpdaterInstall()
   const command = useCommand()
   const language = useLanguage()
@@ -28,8 +30,14 @@ export default function Layout(props: ParentProps) {
     debugTools: false,
     tabsWidth: 260,
     tabsMount: undefined as HTMLElement | undefined,
+    horizontalProjectTabsMount: undefined as HTMLElement | undefined,
   })
   const verticalTabs = () => preferences.appearance.tabLayout() === "vertical" && !mobile()
+  const horizontalProjectTabs = () =>
+    !mobile() &&
+    !verticalTabs() &&
+    preferences.appearance.groupTabsByProject() &&
+    (layout.route().type === "session" || layout.route().type === "draft")
   const bottomTitlebar = () => mobile() && preferences.general.mobileTitlebarPosition() === "bottom"
 
   const update: TitlebarUpdate = {
@@ -74,9 +82,30 @@ export default function Layout(props: ParentProps) {
         <Titlebar
           update={update}
           verticalTabs={verticalTabs() ? { mount: state.tabsMount } : undefined}
+          horizontalProjectTabs={horizontalProjectTabs() ? { mount: state.horizontalProjectTabsMount } : undefined}
           debugTools={debugTools}
         />
         <div class="flex flex-1 min-h-0 min-w-0 flex-row">
+          <Show when={horizontalProjectTabs()}>
+            <aside
+              ref={(element) => setState("horizontalProjectTabsMount", element)}
+              data-slot="horizontal-project-sidebar"
+              class="relative flex h-full min-h-0 shrink-0 flex-col bg-v2-background-bg-deep pe-0.5 ps-2.5 pb-[var(--shell-bottom-inset,8px)] pt-[var(--shell-top-inset,8px)]"
+              style={{
+                width: `${state.tabsWidth}px`,
+                "padding-bottom": "max(10px, var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))",
+              }}
+            >
+              <ResizeHandle
+                class="-end-2"
+                direction="horizontal"
+                size={state.tabsWidth}
+                min={140}
+                max={520}
+                onResize={(width) => setState("tabsWidth", width)}
+              />
+            </aside>
+          </Show>
           <Show when={verticalTabs()}>
             <aside
               ref={(element) => setState("tabsMount", element)}

@@ -15,6 +15,7 @@ import { useSettings } from "@/settings/model"
 import { WindowsAppMenu } from "./windows-menu"
 import { applyPath, backPath, forwardPath, type HistoryLocation } from "./history"
 import { TitlebarTabStrip } from "@/shell/titlebar/tab-strip"
+import { ProjectNavigation } from "@/shell/titlebar/project-navigation"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { createMediaQuery } from "@solid-primitives/media"
 import { readSessionTabsRemovedDetail, SESSION_TABS_REMOVED_EVENT } from "@/shell/titlebar/session-events"
@@ -53,6 +54,7 @@ export function Titlebar(props: {
   update?: TitlebarUpdate
   debugTools?: { visible: boolean; toggle: () => void }
   verticalTabs?: { mount?: HTMLElement }
+  horizontalProjectTabs?: { mount?: HTMLElement }
 }) {
   const platform = usePlatform()
   const command = useCommand()
@@ -616,15 +618,50 @@ export function Titlebar(props: {
                   <Show
                     when={props.verticalTabs}
                     fallback={
-                      <>
-                        <TitlebarTabStrip
-                          projectMode={preferences.appearance.groupTabsByProject()}
+                      <Show
+                        when={preferences.appearance.groupTabsByProject()}
+                        fallback={
+                          <>
+                            <TitlebarTabStrip
+                              tabs={tabsStore}
+                              currentTab={currentTab()}
+                              onNavigate={(tab, el) => {
+                                tabs.select(tab)
+                                el?.scrollIntoView({ behavior: "instant" })
+                              }}
+                              onClose={(tab) => {
+                                const index = tabsStore.findIndex((item) => tabKey(item) === tabKey(tab))
+                                if (index !== -1) tabsStoreActions.closeTab(index)
+                              }}
+                              onReorder={(keys) => tabsStoreActions.reorder(keys)}
+                            />
+                            <Tooltip
+                              placement="bottom"
+                              value={
+                                <>
+                                  {language.t("command.session.new")}
+                                  <Keybind keys={newTabTooltipKeybind(command)} variant="neutral" />
+                                </>
+                              }
+                            >
+                              <IconButton
+                                type="button"
+                                variant="ghost-muted"
+                                size="large"
+                                class="shrink-0"
+                                icon={<Icon name="plus" />}
+                                onClick={openNewTab}
+                                aria-label={language.t("command.session.new")}
+                              />
+                            </Tooltip>
+                          </>
+                        }
+                      >
+                        <ProjectNavigation
                           tabs={tabsStore}
                           currentTab={currentTab()}
-                          onNavigate={(tab, el) => {
-                            tabs.select(tab)
-                            el?.scrollIntoView({ behavior: "instant" })
-                          }}
+                          sideMount={() => props.horizontalProjectTabs?.mount}
+                          onNavigate={(tab) => tabs.select(tab)}
                           onClose={(tab) => {
                             const index = tabsStore.findIndex((item) => tabKey(item) === tabKey(tab))
                             if (index !== -1) tabsStoreActions.closeTab(index)
@@ -650,7 +687,7 @@ export function Titlebar(props: {
                             aria-label={language.t("command.session.new")}
                           />
                         </Tooltip>
-                      </>
+                      </Show>
                     }
                   >
                     {(vertical) => (

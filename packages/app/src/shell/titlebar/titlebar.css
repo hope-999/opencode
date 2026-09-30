@@ -17,6 +17,26 @@
   mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
 }
 
+[data-slot="horizontal-project-sidebar"] [data-slot="horizontal-project-session-sidebar"] {
+  min-height: 0;
+  flex: 1;
+}
+
+[data-slot="horizontal-project-sidebar"] [data-slot="vertical-tabs"] {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+[data-slot="horizontal-project-sidebar"] [data-slot="vertical-tabs-scroll"] {
+  min-height: 0;
+  padding-block-end: 16px;
+  scroll-padding-block-end: 16px;
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 16px), transparent);
+}
+
 [data-slot="mobile-tabs-trigger"][aria-expanded="true"] {
   background:
     linear-gradient(var(--v2-overlay-simple-overlay-hover), var(--v2-overlay-simple-overlay-hover)),

@@ -27,6 +27,7 @@ function SessionTabSlot(props: {
   id: string
   index: number
   active: boolean
+  fixedWidth?: boolean
   orientation: "horizontal" | "vertical"
   session: SessionInfo | undefined
   preparing: boolean
@@ -54,7 +55,9 @@ function SessionTabSlot(props: {
       data-orientation={props.orientation}
       class="relative flex"
       classList={{
-        "w-56 min-w-7 max-w-56 flex-shrink": props.orientation === "horizontal",
+        "w-56 min-w-7 max-w-56": props.orientation === "horizontal",
+        "flex-shrink": props.orientation === "horizontal" && !props.fixedWidth,
+        "shrink-0": props.fixedWidth,
         "w-full shrink-0": props.orientation === "vertical",
       }}
     >
@@ -83,6 +86,7 @@ function SessionTabEntry(props: {
   id: string
   index: number
   active: boolean
+  fixedWidth?: boolean
   orientation: "horizontal" | "vertical"
   serverCtx: ServerCtx | undefined
   onVisibleChange: (visible: boolean) => void
@@ -168,6 +172,7 @@ function SessionTabEntry(props: {
         id={props.id}
         index={props.index}
         active={props.active}
+        fixedWidth={props.fixedWidth}
         orientation={props.orientation}
         session={session()}
         preparing={!!pending()}
@@ -189,6 +194,7 @@ function DraftTabSlot(props: {
   id: string
   index: number
   active: boolean
+  fixedWidth?: boolean
   orientation: "horizontal" | "vertical"
   title: string
   onNavigate: (element: HTMLDivElement) => void
@@ -213,7 +219,9 @@ function DraftTabSlot(props: {
       data-orientation={props.orientation}
       class="relative flex"
       classList={{
-        "w-56 min-w-7 max-w-56 flex-shrink": props.orientation === "horizontal",
+        "w-56 min-w-7 max-w-56": props.orientation === "horizontal",
+        "flex-shrink": props.orientation === "horizontal" && !props.fixedWidth,
+        "shrink-0": props.fixedWidth,
         "w-full shrink-0": props.orientation === "vertical",
       }}
     >
@@ -301,6 +309,7 @@ export function TitlebarTabStrip(props: {
           id={id}
           index={index}
           active={active}
+          fixedWidth={!vertical() && props.projectMode}
           orientation={props.orientation ?? "horizontal"}
           title={language.t("session.tab.session")}
           onNavigate={(element) => props.onNavigate(tab, element)}
@@ -315,6 +324,7 @@ export function TitlebarTabStrip(props: {
         id={id}
         index={index}
         active={active}
+        fixedWidth={!vertical() && props.projectMode}
         orientation={props.orientation ?? "horizontal"}
         serverCtx={server ? global.ensureServerCtx(server) : undefined}
         onVisibleChange={(visible) => setVisibility(id, visible)}
@@ -415,18 +425,34 @@ export function TitlebarTabStrip(props: {
           <div
             data-titlebar-tab-list
             data-orientation={vertical() ? "vertical" : "horizontal"}
-            class="flex w-full min-w-0"
-            classList={{ "flex-row items-center": !vertical(), "flex-col items-stretch": vertical() }}
+            class="flex min-w-0"
+            classList={{
+              "w-full": vertical() || !props.projectMode,
+              "w-max": !vertical() && props.projectMode,
+              "shrink-0": !vertical() && props.projectMode,
+              "flex-row items-center": !vertical(),
+              "flex-col items-stretch": vertical(),
+            }}
             ref={listRef}
           >
             <For each={tabGroups()}>
               {(group) => (
                 <div
                   class="flex min-w-0 gap-1"
-                  classList={{ "flex-row": !vertical(), "flex-col": vertical() }}
-                  data-slot={vertical() ? "vertical-tabs-project-group" : undefined}
+                  classList={{
+                    "flex-row": !vertical(),
+                    "flex-col": vertical(),
+                    "shrink-0": !vertical() && props.projectMode,
+                  }}
+                  data-slot={
+                    vertical()
+                      ? "vertical-tabs-project-group"
+                      : props.projectMode
+                        ? "titlebar-tabs-project-group"
+                        : undefined
+                  }
                 >
-                  <Show when={vertical()}>
+                  <Show when={vertical() && props.projectMode}>
                     <div class="flex h-7 min-w-0 items-center gap-1.5 truncate px-1.5 text-[13px] font-semibold leading-[var(--line-height-compact)] text-v2-text-text-base">
                       <Icon name="folder" size="small" class="shrink-0 text-v2-icon-icon-muted" />
                       {group.title}
