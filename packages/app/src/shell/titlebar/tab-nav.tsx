@@ -31,7 +31,7 @@ export function TabNavItem(props: {
   onRename: (title: string) => Promise<void>
   onClose: () => void
   onNavigate: () => void
-  active?: boolean
+  active?: () => boolean
   suppressNavigation?: boolean
   dragging?: boolean
   pressed?: boolean
@@ -193,9 +193,9 @@ export function TabNavItem(props: {
       data-editing={editing()}
       class="group relative flex h-7 w-full min-w-0 select-none flex-row items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-[6px] px-1.5 [container-type:inline-size]"
       classList={{ invisible: props.hidden }}
-      data-active={props.active}
+      data-active={props.active?.()}
       data-dragging={props.dragging}
-      data-state={props.active || props.pressed ? "pressed" : undefined}
+      data-state={props.active?.() || props.pressed ? "pressed" : undefined}
       onMouseDown={(event) => {
         if (event.button !== MIDDLE_MOUSE_BUTTON) return
         event.preventDefault()
@@ -363,7 +363,7 @@ export function DraftTabItem(props: {
   ref?: Ref<HTMLDivElement>
   href: string
   title: string
-  active?: boolean
+  active?: () => boolean
   onNavigate: () => void
   onClose: () => void
   suppressNavigation?: boolean
@@ -384,9 +384,9 @@ export function DraftTabItem(props: {
       data-titlebar-tab
       data-slot="titlebar-tab-item"
       data-orientation={props.orientation ?? "horizontal"}
-      data-active={props.active}
+      data-active={props.active?.()}
       data-dragging={props.dragging}
-      data-state={props.active || props.pressed ? "pressed" : undefined}
+      data-state={props.active?.() || props.pressed ? "pressed" : undefined}
       class="group relative flex h-7 w-full min-w-0 flex-row items-center gap-1.5 overflow-hidden rounded-[6px] px-1.5 [container-type:inline-size] whitespace-nowrap"
       classList={{ invisible: props.hidden }}
       onMouseDown={(event) => {

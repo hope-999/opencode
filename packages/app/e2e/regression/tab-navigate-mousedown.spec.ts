@@ -79,9 +79,14 @@ test("horizontal project navigation keeps every opened session in its project si
   await expect(tabs).toHaveCount(3)
   await expect(tabs.locator("[data-titlebar-tab-title]")).toHaveText([sessionA.title, sessionB.title, sessionC.title])
   const tabC = tabs.filter({ has: page.locator(`[data-titlebar-tab-link][href*="${sessionC.id}"]`) })
+  const tabA = tabs.filter({ has: page.locator(`[data-titlebar-tab-link][href*="${sessionA.id}"]`) })
+  await expect(tabA).toHaveAttribute("data-active", "true")
+  await expect(tabC).toHaveAttribute("data-active", "false")
   await expect(tabC).toBeVisible()
   await tabC.click()
   await expect(page).toHaveURL(new RegExp(`${sessionC.id}$`))
+  await expect(tabA).toHaveAttribute("data-active", "false")
+  await expect(tabC).toHaveAttribute("data-active", "true")
 })
 
 test("horizontal project navigation resizes its session sidebar in a narrow window", async ({ page }) => {

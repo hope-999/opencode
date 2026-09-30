@@ -26,7 +26,7 @@ function SessionTabSlot(props: {
   tab: SessionTab
   id: string
   index: number
-  active: boolean
+  active: () => boolean
   fixedWidth?: boolean
   orientation: "horizontal" | "vertical"
   session: SessionInfo | undefined
@@ -51,7 +51,7 @@ function SessionTabSlot(props: {
       ref={sortable.ref}
       data-titlebar-tab-slot
       data-tab-key={props.id}
-      data-active={props.active}
+      data-active={props.active()}
       data-orientation={props.orientation}
       class="relative flex"
       classList={{
@@ -85,7 +85,7 @@ function SessionTabEntry(props: {
   tab: SessionTab
   id: string
   index: number
-  active: boolean
+  active: () => boolean
   fixedWidth?: boolean
   orientation: "horizontal" | "vertical"
   serverCtx: ServerCtx | undefined
@@ -139,7 +139,7 @@ function SessionTabEntry(props: {
   createEffect(() => {
     const ctx = props.serverCtx
     const value = session()
-    if (!ctx || !value || props.active || ctx.sdk.connection.status() !== "connected") return
+    if (!ctx || !value || props.active() || ctx.sdk.connection.status() !== "connected") return
     const timer = window.setTimeout(
       () =>
         void Promise.allSettled([
@@ -193,7 +193,7 @@ function DraftTabSlot(props: {
   tab: Extract<Tab, { type: "draft" }>
   id: string
   index: number
-  active: boolean
+  active: () => boolean
   fixedWidth?: boolean
   orientation: "horizontal" | "vertical"
   title: string
@@ -215,7 +215,7 @@ function DraftTabSlot(props: {
       ref={sortable.ref}
       data-titlebar-tab-slot
       data-tab-key={props.id}
-      data-active={props.active}
+      data-active={props.active()}
       data-orientation={props.orientation}
       class="relative flex"
       classList={{
@@ -301,7 +301,7 @@ export function TitlebarTabStrip(props: {
   const renderTab = (tab: Tab) => {
     const id = tabKey(tab)
     const index = tabsForRender().findIndex((item) => tabKey(item) === id)
-    const active = props.currentTab ? tabKey(props.currentTab) === id : false
+    const active = () => (props.currentTab ? tabKey(props.currentTab) === id : false)
     if (tab.type === "draft") {
       return (
         <DraftTabSlot
